@@ -7,7 +7,7 @@ class spreadsheet{
 	public:
 		spreadsheet();
 		~spreadsheet();
-		string process_command();
+		std::string process_command();
 	private:
 };
 #endif
