@@ -28,7 +28,7 @@ int main(int argc , char *argv[])
     int port_number; //Port the client can connect on
 
      if (argc < 2) {
-        cout << "Enter a port or i will beat you with my lightsaber";
+        cout << "Enter a port or i will beat you with my lightsaber\n";
         exit(1);
      }
     port_number = atoi(argv[1]); // convert the port to an int
@@ -37,7 +37,7 @@ int main(int argc , char *argv[])
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
-        cout << "Could not create socket";
+        cout << "Could not create socket\n";
     }
 
     //PFill out the socketaddr structire
@@ -48,7 +48,7 @@ int main(int argc , char *argv[])
     //Bind the socket so we can use it like a jedi
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
-        puts("Binding failed");
+        cout << ("Binding failed\n");
         return 1;
     }
     cout << "Binding socket using the force!\n";
@@ -57,13 +57,13 @@ int main(int argc , char *argv[])
     listen(socket_desc , 3);
 
     //Accept and incoming connection
-    cout << "Waiting for incoming connections...";
+    cout << "Waiting for incoming connections...\n";
 
     client_address_size = sizeof(struct sockaddr_in); //Get the size of the client address. 
     
     while( (new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&client_address_size)) )
     {
-        puts("Connection accepted");
+        cout << "Connection accepted\n";
 
         //Reply to the client letting them know they are connected
         message = (char*) "Client you are connected...\n";
@@ -79,7 +79,7 @@ int main(int argc , char *argv[])
             return 1;
         }
 
-        cout << "Client thread created for transmitting message";
+        cout << "Client thread created for transmitting message\n";
     }
 
     if (new_socket<0)
@@ -121,7 +121,7 @@ void *accepted_callback(void *socket_desc)
 
     if(read_size == 0)
     {
-        cout << "Client disconnected";
+        cout << "Client disconnected\n";
         fflush(stdout); //Flush std out
     }
     else if(read_size == -1)
