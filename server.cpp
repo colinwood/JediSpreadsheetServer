@@ -10,6 +10,9 @@
 #include <unistd.h>    
 #include <pthread.h> 
 #include <iostream>
+#include <boost/regex.hpp>
+#include <string>
+#include <sstream>
 
 using namespace std;
 
@@ -106,6 +109,9 @@ void *accepted_callback(void *socket_desc)
     message = (char*) "Enter something and i will echo it back. BTW nice shirt\n";
     write(sock , message , strlen(message));
 
+    
+    string message_string;
+
     //Receive a message from client
     while( (read_size = recv(sock , client_message , 2000 , 0)) > 0 )
     {
@@ -114,6 +120,13 @@ void *accepted_callback(void *socket_desc)
         write(sock , client_message , strlen(client_message));
 
         cout << client_message;
+        
+
+        //check if it contains a new line
+        //if new line process message
+        //else append to current message
+        //clear out buffer
+
         memset(client_message, 0, sizeof client_message); //Clear out the message buffer. 
         //This is where we need to wait for the message terminator
 
