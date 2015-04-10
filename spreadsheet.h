@@ -5,9 +5,12 @@
 
 class spreadsheet{
 	public:
-		spreadsheet();
+		spreadsheet(std::string sheet_name); //Creates a brand new spreadsheet
 		~spreadsheet();
-		std::string process_command();
+		static void create(std::string sheet_name);//Needs to create an empty sheetwith necessary xml data
+		std::string process_command(std::string command);
+		std::string sheet_name;
+		int users;
 	private:
 };
 #endif
