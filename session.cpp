@@ -74,7 +74,8 @@ void session::disconnect(string sheet_name){
 bool session::sheet_exists(string sheet_name){
 	stringstream path;
 	path << "sheets/" << sheet_name << ".xml"; //define path to file
-	ifstream file(path.str()); //Check if it is there by trying to open it
+	string s = path.str();
+	ifstream file(s.c_str());; //Check if it is there by trying to open it
 	if(file.is_open() || file.good()){
 		file.close(); //Close the file
 		return true;

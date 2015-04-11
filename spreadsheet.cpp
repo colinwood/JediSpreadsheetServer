@@ -23,14 +23,14 @@ string spreadsheet::process_command(string command){
 	return s;
 }
 //Looks in the sheets folder and copies
-//the base xml file to a new file 
+
 void spreadsheet::create(string sheet_name){
 	   char ch;
 	   stringstream name_stream;
 	   name_stream << "sheets/" << sheet_name << ".xml"; 
-
+	   string name_string = name_stream.str();
        ifstream f1("sheets/base_spreadsheet.xml");
-       ofstream f2(name_stream.str());
+       ofstream f2(name_string.c_str());
        
        if(!f1) 
           cerr <<"Can't open IN file\n";
