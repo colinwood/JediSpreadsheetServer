@@ -22,8 +22,9 @@ string spreadsheet::process_command(string command){
 	string s = "hello";
 	return s;
 }
-//Looks in the sheets folder and copies
-
+//Looks in the sheets folder and copies the template to make an empty sheet.
+//Might not need to copy the sheet now that i read the protocol more closely
+//Probably just need to store CELL A1 =A2 + 3\n for example
 void spreadsheet::create(string sheet_name){
 	   char ch;
 	   stringstream name_stream;
