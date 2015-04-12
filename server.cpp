@@ -10,17 +10,18 @@
 #include <unistd.h>    
 #include <pthread.h> 
 #include <iostream>
-#include <boost/regex.hpp>
 #include <string>
 #include <sstream>
 #include <vector>
 #include <fstream>
+#include <cstring>
 #include "spreadsheet.h"
 
 using namespace std;
-using namespace boost;//neded for regex
+
 
 void *accepted_callback(void *); //Forward decleration
+vector<char*> tokenize(string delimiter, string target);
 
 int main(int argc , char *argv[])
 {
@@ -119,69 +120,55 @@ void *accepted_callback(void *socket_desc)
     int sock = *(int*)socket_desc;
     int read_size;
     char *message , client_message[100];
-
-    string connect_pattern = "connect (\\S)+ (\\S)+\n+";
-    string register_pattern = "(register)\\s(\\S)+\n";
-    string cell_pattern = "(cell)\\s(\\S)+\\s(\\S)+\n";
-    string undo_pattern = "(undo)\n";
-
-    static const regex connect_regex(connect_pattern);
-    static const regex register_regex(register_pattern);
-    static const regex cell_regex(cell_pattern);
-    static const regex undo_regex(undo_pattern);
-
-    string valid_pattern = ".*\n";
-    static const boost::regex valid_regex(valid_pattern);
-    boost::smatch what;
-    stringstream message_stream;
+    vector<char *> tokens;
+    
     //Receive a message from client
     while( (read_size = recv(sock , client_message , 100 , 0)) > 0 )
     {   
-        message_stream << client_message;
-        if(regex_search(message_stream.str(), what, valid_regex, boost::match_not_dot_newline))
-        {
-            string command = std::string(what[0]).c_str();
-            string response;  
-            
-            char * input = new char[command.size() + 1];
-            std::copy(command.begin(), command.end(), input);
-            input[command.size()] = '\0';
-            char *token = std::strtok(input, " ");
-            vector<char*> tokens;
-            while(token != NULL){
-                tokens.push_back(token);
-                token = strtok (NULL, " ");
-            }
-            if( regex_match(command.c_str(), connect_regex)){
-                string client_name = tokens.at(1);
-                string sheet_name = tokens.at(2);
-                //validate the user if you cant then send error message
-                if(!validate_user(client_name)){
-                    response = "error 4 ";
-                    response.append(client_name);
+        
+        tokens = tokenize("\n", client_message);
+        string response;
+        if(!tokens.empty())
+        { 
+            vector<char *> command = tokenize(" ", tokens.at(0));
+
+            const string connect = "connect";
+            const string register_command = "register";
+
+            if(!command.empty()){
+                cout << command.at(0) << "command not empty" << endl;
+
+                if(connect.compare(command.at(0)) == 0){
+                    cout << command.at(0) << "connect command"<< endl;
+                    string client_name = command.at(1);
+                    string sheet_name = command.at(2);
+                    
+                    //validate the user if you cant then send error message
+                    if(!validate_user(client_name)){
+                        response = "error 4 ";
+                        response.append(client_name);
+                        response.append("\n");
+                    }
+                    else{
+                        cout << "Client: " << client_name << " Connecting to : " << sheet_name << endl;
+                        response = "connected 2\n";
+                        //need to fetch sheet data here
+                    }
                 }
-                else{
-                    cout << "Client: " << client_name << " Connecting to : " << sheet_name << endl;
-                    response = "connected 2";
-                    //need to fetch sheet data here
+            
+                if(register_command.compare(command.at(0)) == 0){
+                    string client_name = command.at(1);
+                    cout << "Registering new user: " << client_name << endl;
+                    std::fstream fs;
+                    fs.open ("users.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+                    fs << client_name << "\n";
+                    fs.close();
                 }
-            }
-            if( regex_match(command.c_str(), register_regex)){
-                string client_name = tokens.at(1);
-                cout << "Registered: " << client_name << endl;
-                std::fstream fs;
-                fs.open ("users.txt", std::fstream::in | std::fstream::out | std::fstream::app);
-                fs << client_name;
+            
             }
             
-           
             write(sock, response.c_str(), response.size()); //Send Response to clietn
             //Delete old command from running stream
-            string new_message = message_stream.str();
-            new_message.erase(0, command.size());
-            message_stream.str(new_message);  
-            
-            write(sock, "Valid Message\n", 15);
         }
         memset(client_message, 0, sizeof client_message); //Clear out the message buffer. 
     }
@@ -199,4 +186,17 @@ void *accepted_callback(void *socket_desc)
     //Free the socket pointer
     free(socket_desc);
     return 0;
+}
+
+vector<char*> tokenize(string delimiter, string target){
+    char * input = new char[target.size() + 1];
+    std::copy(target.begin(), target.end(), input);
+    input[target.size()] = '\0';
+    char *token = std::strtok(input, delimiter.c_str());
+    vector<char*> tokens;
+    while(token != NULL){
+        tokens.push_back(token);
+        token = std::strtok(NULL, delimiter.c_str());
+    }
+    return tokens;
 }

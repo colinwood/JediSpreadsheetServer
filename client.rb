@@ -4,7 +4,8 @@ require 'socket'
 hostname = 'localhost'
 
 
-s = TCPSocket.open(hostname, 2119)
+s = TCPSocket.open("155.98.111.62", 2119)
+#s = TCPSocket.open("localhost", 2118)
 puts "Attempting to connect..."
 
 

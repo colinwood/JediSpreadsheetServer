@@ -1,21 +1,25 @@
 #include <iostream>
-#include <boost/regex.hpp>
 #include <string>
-
+#include <vector>
 
 using namespace std;
-
-int main(){
-
-  string client_message = "register Johnny\n";
-
-  string valid_pattern = ".*\n";
-  static const boost::regex valid_regex(valid_pattern);
-  boost::smatch what;
-  regex_search(client_message, what, valid_regex, boost::match_not_dot_newline);
-  string command = std::string(what[1].first,what[1].second);
-  client_message.erase(0, command.size());
-
-  cout << client_message;
+//returns a vector of tokens
+vector<char*> tokenize(string delimiter, string target){
+	char * input = new char[target.size() + 1];
+	std::copy(target.begin(), target.end(), input);
+	input[target.size()] = '\0';
+	char *token = std::strtok(input, delimiter.c_str());
+	vector<char*> tokens;
+	while(token != NULL){
+		tokens.push_back(token);
+		token = strtok (NULL, delimiter.c_str());
+	}
+	return tokens;
+}
+int main()
+{
+	char* s = "bannanas";
+	vector<char*> tokens = tokenize("\n", s);
 
 }
+
