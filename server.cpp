@@ -1,7 +1,6 @@
-/*
+    /*
 * A simple asych server that as of today just echose back what a client sends to it. 
 */
-
 #include <stdio.h>
 #include <string.h>    
 #include <stdlib.h>   
@@ -15,6 +14,7 @@
 #include <vector>
 #include <fstream>
 #include <cstring>
+#include "session.h"
 #include "spreadsheet.h"
 
 using namespace std;
@@ -22,6 +22,7 @@ using namespace std;
 
 void *accepted_callback(void *); //Forward decleration
 vector<char*> tokenize(string delimiter, string target);
+static session sesh;
 
 int main(int argc , char *argv[])
 {
@@ -71,11 +72,7 @@ int main(int argc , char *argv[])
     
     while( (new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&client_address_size)) )
     {
-        cout << "Connection accepted\n";
-
-        //Reply to the client letting them know they are connected
-        message = (char*) "Client you are connected...\n";
-        write(new_socket , message , strlen(message));
+        cout << "Connection accepted\n";        
 
         pthread_t sniffer_thread;
         new_sock = (int*) malloc(1);
@@ -98,7 +95,7 @@ int main(int argc , char *argv[])
 
     return 0;
 }
-
+//Ensurtes the user is in the user db
 bool validate_user(string client_name)
 {
     fstream readFile("users.txt");
@@ -121,7 +118,9 @@ void *accepted_callback(void *socket_desc)
     int read_size;
     char *message , client_message[100];
     vector<char *> tokens;
-    
+    spreadsheet* user_sheet = NULL;
+    string client_name;
+    string sheet_name;
     //Receive a message from client
     while( (read_size = recv(sock , client_message , 100 , 0)) > 0 )
     {   
@@ -136,12 +135,12 @@ void *accepted_callback(void *socket_desc)
             const string register_command = "register";
 
             if(!command.empty()){
-                cout << command.at(0) << "command not empty" << endl;
+                //cout << command.at(0) << "command not empty" << endl;
 
                 if(connect.compare(command.at(0)) == 0){
-                    cout << command.at(0) << "connect command"<< endl;
-                    string client_name = command.at(1);
-                    string sheet_name = command.at(2);
+                    //cout << command.at(0) << "connect command"<< endl;
+                    client_name = command.at(1);
+                    sheet_name = command.at(2);
                     
                     //validate the user if you cant then send error message
                     if(!validate_user(client_name)){
@@ -150,13 +149,15 @@ void *accepted_callback(void *socket_desc)
                         response.append("\n");
                     }
                     else{
-                        cout << "Client: " << client_name << " Connecting to : " << sheet_name << endl;
+                        
+                        user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
+                        cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
+                        cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
                         response = "connected 2\n";
-                        //need to fetch sheet data here
+                        //Need to fetch sheet data here
                     }
                 }
-            
-                if(register_command.compare(command.at(0)) == 0){
+                else if(register_command.compare(command.at(0)) == 0){
                     string client_name = command.at(1);
                     cout << "Registering new user: " << client_name << endl;
                     std::fstream fs;
@@ -164,9 +165,7 @@ void *accepted_callback(void *socket_desc)
                     fs << client_name << "\n";
                     fs.close();
                 }
-            
-            }
-            
+            }   
             write(sock, response.c_str(), response.size()); //Send Response to clietn
             //Delete old command from running stream
         }
@@ -175,8 +174,19 @@ void *accepted_callback(void *socket_desc)
 
     if(read_size == 0)
     {
+       // cout << "Before Disconnect Users:" << user_sheet->connected_sockets.size();   
+
+        for(std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it){
+            int target_socket = *it;
+            if(sock == target_socket){
+                 user_sheet->connected_sockets.erase(it); 
+                 break;
+            }
+        }
+        
+        //cout << "After Disconnect Users: " << user_sheet->connected_sockets.size() << endl;
         cout << "Client disconnected\n";
-        fflush(stdout); //Flush std out
+        fflush(stdout); //Flush std out   
     }
     else if(read_size == -1)
     {
@@ -187,7 +197,6 @@ void *accepted_callback(void *socket_desc)
     free(socket_desc);
     return 0;
 }
-
 vector<char*> tokenize(string delimiter, string target){
     char * input = new char[target.size() + 1];
     std::copy(target.begin(), target.end(), input);
