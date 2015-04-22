@@ -44,7 +44,6 @@ spreadsheet* session::connect(string sheet_name, int user_socket)  {
 	if (!sheet_open(sheet_name)) {
 		sheet_vector.push_back(new spreadsheet(sheet_name));
 		
-		sheet_vector.back()->open(sheet_name);
 	}
 	pthread_mutex_unlock(&lock);
 
@@ -70,7 +69,7 @@ bool session::sheet_exists(string sheet_name) {
 	path += sheet_name;
 	path += ".txt";
 	cout << path << endl;
-	ifstream file(path);; //Check if it is there by trying to open it
+	ifstream file(path.c_str());; //Check if it is there by trying to open it
 	if (file.is_open() || file.good()) {
 		file.close(); //Close the file
 		return true;

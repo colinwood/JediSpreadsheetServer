@@ -24,7 +24,6 @@ void *accepted_callback(void *); //Forward decleration
 vector<char*> tokenize(string delimiter, string target);
 static session sesh;
 
-
 void *accepted_callback(void *); //Forward decleration
 vector<char*> tokenize(string delimiter, string target);
 stack<pair<string, string> > * undoStack;
@@ -171,7 +170,7 @@ void* accepted_callback(void *socket_desc)
                         cout << "unregistered user connect request" << endl;
                     }
                     else {
-                        sheet_name.pop_back();
+                        sheet_name.erase(sheet_name.size()-1);
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users

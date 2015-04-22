@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include "spreadsheet.h"
+#include <cstring>
 
 using namespace std;
 
@@ -17,6 +18,7 @@ using namespace std;
 //keeping track and performing undo's, and saving the file.
 spreadsheet::spreadsheet(string sheet_name) {
   this->sheet_name = sheet_name;
+  open(sheet_name);
 }
 //empty contructor
 spreadsheet::spreadsheet() {
@@ -41,7 +43,7 @@ void spreadsheet::open(string sheet_name){
   path += sheet_name;
   path += ".txt";
 
-  fstream readFile(path);
+  fstream readFile(path.c_str());
     string line;
     while (getline(readFile, line)) {
       vector<char *> tokens = tokenize(" ", line);
@@ -62,6 +64,10 @@ std::string spreadsheet::get_all_cells(){
     response += "\n";
   }
   return response;
+}
+
+void save(){
+
 }
 
 //creates an empty document for writing to.

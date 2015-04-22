@@ -16,6 +16,7 @@ class spreadsheet{
 		void open(std::string sheet_name);
 		std::map<std::string, std::string> cells_map;
 		std::string get_all_cells();
+		void save();
 	private:
 		pthread_mutex_t lock;
 		std::vector<char *> tokenize(std::string delimiter, std::string target);
