@@ -2,7 +2,7 @@
 #define SPREADSHEET_H
 
 #include<string>
-
+#include <map>
 
 class spreadsheet{
 	public:
@@ -13,8 +13,14 @@ class spreadsheet{
 		void process_command(std::string command);//Thread safe method that process spreadsheet commands
 		std::string sheet_name;
 		std::vector<int> connected_sockets; //holds pointers to all the active sockets working on this sheet
+		void open(std::string sheet_name);
+		std::map<std::string, std::string> cells_map;
+		std::string get_all_cells();
 	private:
 		pthread_mutex_t lock;
+		std::vector<char *> tokenize(std::string delimiter, std::string target);
+		
+
 		
 };
 #endif

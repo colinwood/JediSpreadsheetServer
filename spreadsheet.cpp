@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 #include <fstream>
 #include <sstream>
 #include <pthread.h>
@@ -34,6 +35,35 @@ void spreadsheet::process_command(string command) {
   //code for editing a spreadsheet goes here to prevent conncurrent operations
   pthread_mutex_unlock(&lock);
 }
+//reads file and returns the cell commands
+void spreadsheet::open(string sheet_name){
+  string path = "sheets/";
+  path += sheet_name;
+  path += ".txt";
+
+  fstream readFile(path);
+    string line;
+    while (getline(readFile, line)) {
+      vector<char *> tokens = tokenize(" ", line);
+      cells_map[tokens.at(1)] = tokens.at(2);
+    }
+    readFile.close(); 
+}
+
+std::string spreadsheet::get_all_cells(){
+  string response= "";
+
+  map<string, string>::iterator iterator;
+  for(iterator = cells_map.begin(); iterator != cells_map.end(); iterator++) {
+    response += "cell ";
+    response += iterator->first;
+    response += " ";
+    response += iterator->second;
+    response += "\n";
+  }
+  return response;
+}
+
 //creates an empty document for writing to.
 void spreadsheet::create(string sheet_name) {
   string path = "sheets/";
@@ -45,5 +75,18 @@ void spreadsheet::create(string sheet_name) {
   if (!file)
     cerr << "Can't create file for spreadsheet\n";
   file.close();
+}
+
+vector<char *> spreadsheet::tokenize(string delimiter, string target) {
+    char * input = new char[target.size() + 1];
+    std::copy(target.begin(), target.end(), input);
+    input[target.size()] = '\0';
+    char *token = std::strtok(input, delimiter.c_str());
+    vector<char*> tokens;
+    while (token != NULL) {
+        tokens.push_back(token);
+        token = std::strtok(NULL, delimiter.c_str());
+    }
+    return tokens;
 }
 
