@@ -170,7 +170,8 @@ void* accepted_callback(void *socket_desc)
                         cout << "unregistered user connect request" << endl;
                     }
                     else {
-                        sheet_name.erase(sheet_name.size()-1);
+
+                        sheet_name.erase(sheet_name.size());
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
@@ -178,8 +179,8 @@ void* accepted_callback(void *socket_desc)
                         response += "connected ";
                         stringstream value;
                         value << user_sheet->cells_map.size();
-                        response +=  value.str();
-                        response += " \n";
+                        response += value.str();
+                        response += "\n";
                         response += user_sheet->get_all_cells();
                         //Need to fetch sheet data here
                     }
@@ -211,7 +212,7 @@ void* accepted_callback(void *socket_desc)
                     string cellname = command.at(1);
                     string content = command.at(2);
 
-                    command.erase(command.begin(), command.begin() + 1);
+                    command.erase(command.begin(), command.end());
                     int i = 2;
                     while( i != command.size()){
                         content += command.at(i);
