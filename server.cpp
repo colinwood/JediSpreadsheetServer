@@ -151,10 +151,10 @@ void* accepted_callback(void *socket_desc)
         messagestream << client_message; //streaM used for holding the message in case we don't get full message
         tokens = tokenize("\n", messagestream.str());
         string response;
-
+        bool cell_update = false;
         if (!tokens.empty())
         {
-            bool cell_update = false;
+
             vector<char *> command = tokenize(" ", tokens.at(0));
             if (!command.empty()) {
                 //CONNECT COMMAND
@@ -165,13 +165,11 @@ void* accepted_callback(void *socket_desc)
 
                     //validate the user if you cant then send error message
                     if (!validate_user(client_name)) {
-                        executed_command = true;
+
                         response = "error 4 ";
                         response.append(client_name);
                         response.append("\n");
                         cout << "unregistered user connect request" << endl;
-                        write(sock, response.c_str(), response.size());
-
                     }
                     else {
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
@@ -183,7 +181,7 @@ void* accepted_callback(void *socket_desc)
                 }
                 //REGISTER COMMAND
                 else if (register_command.compare(command.at(0)) == 0 && command.size() == 2) {
-                    executed_command = true;
+
                     string client_name = command.at(1);
 
                     if (!validate_user(client_name)) {
@@ -199,14 +197,21 @@ void* accepted_callback(void *socket_desc)
                         response.append(client_name);
                         response.append("\n");
                     }
-                    write(sock, response.c_str(), response.size());
+
 
                 }
                 //CELL COMMAND
-                else if (celcom.compare(command.at(0)) == 0 && command.size() == 3) {
-                    executed_command = true;
+                else if (celcom.compare(command.at(0)) == 0 && command.size() > 2 ) {
+
                     string cellname = command.at(1);
                     string content = command.at(2);
+
+                    command.erase(command.begin(), command.begin() + 1);
+                    int i = 2;
+                    while( i != command.size()){
+                        content += command.at(i);
+                        i++;
+                    }
                     string oldcontent = "";
                     if (cells->count(cellname) > 0) {
                         oldcontent = (*cells)[cellname];
@@ -220,10 +225,11 @@ void* accepted_callback(void *socket_desc)
                     response += content;
                     response += "\n";
                     cout << response << endl;
+                    cell_update = true;
                 }
                 //UNDO COMMAND
                 else if (undo.compare(command.at(0)) == 0 && command.size() == 1) {
-                    executed_command = true;
+
                     string cellname;
                     string content;
                     //please add iterators here
@@ -243,6 +249,7 @@ void* accepted_callback(void *socket_desc)
                         cout << response << endl;
                         //Possible fix:
                         (*cells)[blah.first] = blah.second;
+                        cell_update = true; // flag to send out to everyone
                     }
                     else
                     {
@@ -251,16 +258,19 @@ void* accepted_callback(void *socket_desc)
                 }
                 //DID NOT RECEIVE A COMMAND
                 else {
-                    messagestream.str("");
-                    continue;
+                    cout << "invalid command" << endl;
+                    response = "error 2 invalid_command\n";
                 }
             }
             //Make sure we actually have a sheet to iterate over
-            if (user_sheet != NULL) {
+            if (cell_update && user_sheet != NULL) {
                 for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
                     int target_socket = *it;
                     write(target_socket, response.c_str(), response.size()); //Send Response to clients
                 }
+            }
+            else {
+                write(sock, response.c_str(), response.size()); //Send Response to clients
             }
             messagestream.str("");
         }
@@ -269,8 +279,6 @@ void* accepted_callback(void *socket_desc)
 
     if (read_size == 0)
     {
-        // cout << "Before Disconnect Users:" << user_sheet->connected_sockets.size();
-
         for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
             int target_socket = *it;
             if (sock == target_socket) {
@@ -278,8 +286,6 @@ void* accepted_callback(void *socket_desc)
                 break;
             }
         }
-
-        //cout << "After Disconnect Users: " << user_sheet->connected_sockets.size() << endl;
         cout << "Client disconnected\n";
         fflush(stdout); //Flush std out
     }
@@ -292,6 +298,8 @@ void* accepted_callback(void *socket_desc)
     free(socket_desc);
     return 0;
 }
+
+//Helper method for splitting a string
 vector<char*> tokenize(string delimiter, string target) {
     char * input = new char[target.size() + 1];
     std::copy(target.begin(), target.end(), input);
