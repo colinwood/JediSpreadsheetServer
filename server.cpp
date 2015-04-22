@@ -172,6 +172,7 @@ void* accepted_callback(void *socket_desc)
                         cout << "unregistered user connect request" << endl;
                     }
                     else {
+                        sheet_name.pop_back();
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
@@ -257,8 +258,7 @@ void* accepted_callback(void *socket_desc)
                     }
                 }
                 //DID NOT RECEIVE A COMMAND
-                else {
-                    cout << "invalid command" << endl;
+                else if(command.size() > 0){
                     response = "error 2 invalid_command\n";
                 }
             }
@@ -280,6 +280,7 @@ void* accepted_callback(void *socket_desc)
     if (read_size == 0 )
     {
         if(user_sheet != NULL){
+
         for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
             int target_socket = *it;
             if (sock == target_socket) {

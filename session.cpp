@@ -65,15 +65,17 @@ spreadsheet* session::connect(string sheet_name, int user_socket)  {
 //Check if a sheet exists on the server
 //returns true when the sheet is located in the sheet folder
 bool session::sheet_exists(string sheet_name){
-	stringstream path;
-	path << "sheets/" << sheet_name << ".txt"; //define path to file
-	string s = path.str();
-	ifstream file(s.c_str());; //Check if it is there by trying to open it
+	string path = "sheets/";
+	path += sheet_name;
+	path += ".txt";
+	cout << path << endl;
+	ifstream file(path);; //Check if it is there by trying to open it
 	if(file.is_open() || file.good()){
 		file.close(); //Close the file
 		return true;
 	}
 	else
+		file.close(); //Close the file
 		return false;
 }	
 //Check if the sheet is open by looking at all the spreadsheet 
