@@ -277,8 +277,9 @@ void* accepted_callback(void *socket_desc)
         memset(client_message, 0, sizeof client_message); //Clear out the message buffer.
     }
 
-    if (read_size == 0)
+    if (read_size == 0 )
     {
+        if(user_sheet != NULL){
         for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
             int target_socket = *it;
             if (sock == target_socket) {
@@ -286,6 +287,7 @@ void* accepted_callback(void *socket_desc)
                 break;
             }
         }
+    }
         cout << "Client disconnected\n";
         fflush(stdout); //Flush std out
     }
