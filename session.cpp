@@ -61,13 +61,7 @@ spreadsheet* session::connect(string sheet_name, int user_socket)  {
 
 	return sheet_vector.at(location); //remmber to clean this up on a disconnect
 }
-//Closes the active spreadsheet if there is no one using it
-//it is crucial that the server notifies the session when
-//a user disconnects. 
-void session::disconnect(spreadsheet* user_sheet, int socket){
-	
 
-}
 //Check if a sheet exists on the server
 //returns true when the sheet is located in the sheet folder
 bool session::sheet_exists(string sheet_name){

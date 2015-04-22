@@ -1,21 +1,21 @@
-    /*
-* A simple asych server that as of today just echose back what a client sends to it. 
-*/
 #include <stdio.h>
-#include <string.h>    
-#include <stdlib.h>   
+#include <string.h>
+#include <stdlib.h>
 #include <sys/socket.h>
-#include <arpa/inet.h> 
-#include <unistd.h>    
-#include <pthread.h> 
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <pthread.h>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <vector>
+#include <map>
 #include <fstream>
+#include <set>
 #include <cstring>
 #include "session.h"
 #include "spreadsheet.h"
+#include <stack>
 
 using namespace std;
 
@@ -24,24 +24,33 @@ void *accepted_callback(void *); //Forward decleration
 vector<char*> tokenize(string delimiter, string target);
 static session sesh;
 
+
+void *accepted_callback(void *); //Forward decleration
+vector<char*> tokenize(string delimiter, string target);
+stack<pair<string, string> > * undoStack;
+map<string, string> * cells;
+
 int main(int argc , char *argv[])
 {
-
+    cells = new map<string, string>;
+    undoStack = new stack<pair<string, string> >;
     int socket_desc; //Descriptor of the tcp client connected
-    int new_socket; //Socket for client
+    static int new_socket; //Socket for client
     int client_address_size; //How long the address of the client is
     int *new_sock; //Pointer to the new socket
     struct sockaddr_in server , client;
     char *message; //Incoming message
 
+
+
     int port_number; //Port the client can connect on
 
-     if (argc < 2) {
+    if (argc < 2) {
         cout << "Enter a port or i will beat you with my lightsaber\n";
         exit(1);
-     }
+    }
     port_number = atoi(argv[1]); // convert the port to an int
-
+    pthread_t sniffer_thread[5];
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
@@ -55,7 +64,7 @@ int main(int argc , char *argv[])
     server.sin_port = htons( port_number );
 
     //Bind the socket so we can use it like a jedi
-    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
+    if ( bind(socket_desc, (struct sockaddr *)&server , sizeof(server)) < 0)
     {
         cout << ("Binding failed\n");
         return 1;
@@ -63,93 +72,108 @@ int main(int argc , char *argv[])
     cout << "Binding socket using the force!\n";
 
     //Listen for connections
-    listen(socket_desc , 3);
+    listen(socket_desc , 5);
 
     //Accept and incoming connection
     cout << "Waiting for incoming connections...\n";
 
-    client_address_size = sizeof(struct sockaddr_in); //Get the size of the client address. 
-    
-    while( (new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&client_address_size)) )
+    //Get the size of the client address.
+    int i = 0;
+    while (true)
     {
-        cout << "Connection accepted\n";        
-
-        pthread_t sniffer_thread;
-        new_sock = (int*) malloc(1);
+        client_address_size = sizeof(struct sockaddr_in);
+        new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&client_address_size);
+        cout << "Connection accepted\n";
+        //Reply to the client letting them know they are connected
+        new_sock = (int*) malloc(100);
         *new_sock = new_socket;
 
-        if( pthread_create( &sniffer_thread , NULL ,  accepted_callback , (void*) new_sock) < 0)
-        {
-            perror("could not create thread");
-            return 1;
-        }
-
+        pthread_create(&sniffer_thread[i] , NULL ,  accepted_callback , (void*) new_sock);
+        i++;
         cout << "Client thread created for transmitting message\n";
     }
-
-    if (new_socket<0)
+    for (int i = 0; i < 5; i++) {
+        pthread_join(sniffer_thread[i], NULL);
+    }
+    if (new_socket < 0)
     {
         perror("accept failed");
         return 1;
     }
 
-    return 0;
 }
-//Ensurtes the user is in the user db
+//Ensurtes the user is in the user db also used to check if the username is unique
 bool validate_user(string client_name)
 {
     fstream readFile("users.txt");
     string line;
-    while(getline(readFile,line)){
-        if(line == client_name){
-          return true;
+    while (getline(readFile, line)) {
+
+        if (line == client_name) {
+            readFile.close();
+            return true;
         }
     }
+    readFile.close();
     return false;
 }
+
+
 
 /*
  * After a connection is made calls this to transit messages
  * */
-void *accepted_callback(void *socket_desc)
+void* accepted_callback(void *socket_desc)
 {
+    cout << "Accepted callback..." << endl;
+    //std::vector<string> cellnames;
+    //std::vector<string> contents;
+    int sock;
     //Get the socket descriptor
-    int sock = *(int*)socket_desc;
+    sock = *(int*)socket_desc;
     int read_size;
     char *message , client_message[100];
     vector<char *> tokens;
     spreadsheet* user_sheet = NULL;
     string client_name;
     string sheet_name;
+
+    const string connect = "connect";
+    const string celcom = "cell";
+    const string circular = "circular";
+    const string undo = "undo";
+    const string register_command = "register";
+
+    stringstream messagestream;
     //Receive a message from client
-    while( (read_size = recv(sock , client_message , 100 , 0)) > 0 )
-    {   
-        
-        tokens = tokenize("\n", client_message);
+    while ( (read_size = recv(sock , client_message , 100 , 0)) > 0 )
+    {
+        messagestream << client_message; //streaM used for holding the message in case we don't get full message
+        tokens = tokenize("\n", messagestream.str());
         string response;
-        if(!tokens.empty())
-        { 
+
+        if (!tokens.empty())
+        {
+            bool cell_update = false;
             vector<char *> command = tokenize(" ", tokens.at(0));
-
-            const string connect = "connect";
-            const string register_command = "register";
-
-            if(!command.empty()){
-                //cout << command.at(0) << "command not empty" << endl;
-
-                if(connect.compare(command.at(0)) == 0){
+            if (!command.empty()) {
+                //CONNECT COMMAND
+                if (connect.compare(command.at(0)) == 0  && command.size() == 3) {
                     //cout << command.at(0) << "connect command"<< endl;
                     client_name = command.at(1);
                     sheet_name = command.at(2);
-                    
+
                     //validate the user if you cant then send error message
-                    if(!validate_user(client_name)){
+                    if (!validate_user(client_name)) {
+                        executed_command = true;
                         response = "error 4 ";
                         response.append(client_name);
                         response.append("\n");
+                        cout << "unregistered user connect request" << endl;
+                        write(sock, response.c_str(), response.size());
+
                     }
-                    else{
-                        
+                    else {
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
@@ -157,38 +181,109 @@ void *accepted_callback(void *socket_desc)
                         //Need to fetch sheet data here
                     }
                 }
-                else if(register_command.compare(command.at(0)) == 0){
+                //REGISTER COMMAND
+                else if (register_command.compare(command.at(0)) == 0 && command.size() == 2) {
+                    executed_command = true;
                     string client_name = command.at(1);
-                    cout << "Registering new user: " << client_name << endl;
-                    std::fstream fs;
-                    fs.open ("users.txt", std::fstream::in | std::fstream::out | std::fstream::app);
-                    fs << client_name << "\n";
-                    fs.close();
+
+                    if (!validate_user(client_name)) {
+                        cout << "Registering new user: " << client_name << endl;
+                        std::fstream fs;
+                        fs.open ("users.txt", std::fstream::in | std::fstream::out | std::fstream::app);
+                        fs << client_name << "\n";
+                        fs.close();
+                        response = "registered \n";
+                    }
+                    else {
+                        response = "error 4 ";
+                        response.append(client_name);
+                        response.append("\n");
+                    }
+                    write(sock, response.c_str(), response.size());
+
                 }
-            }   
-            write(sock, response.c_str(), response.size()); //Send Response to clietn
-            //Delete old command from running stream
+                //CELL COMMAND
+                else if (celcom.compare(command.at(0)) == 0 && command.size() == 3) {
+                    executed_command = true;
+                    string cellname = command.at(1);
+                    string content = command.at(2);
+                    string oldcontent = "";
+                    if (cells->count(cellname) > 0) {
+                        oldcontent = (*cells)[cellname];
+                    }
+                    undoStack->push(pair<string, string>(cellname, oldcontent));
+                    (*cells)[cellname] = content;
+                    cout << cellname << " " << oldcontent << " inserted into the stack" << endl;
+                    response = "cell ";
+                    response += cellname;
+                    response += " ";
+                    response += content;
+                    response += "\n";
+                    cout << response << endl;
+                }
+                //UNDO COMMAND
+                else if (undo.compare(command.at(0)) == 0 && command.size() == 1) {
+                    executed_command = true;
+                    string cellname;
+                    string content;
+                    //please add iterators here
+                    //cellname = cellnames.at(cellnames.size()-i+1);
+                    //content = contents.at(contents.size()-i+1);
+
+                    cout << "Received undo request" << endl;
+                    if (undoStack->size() > 0) {
+                        cout << "The stack is being popped: see response in next message" << endl;
+                        pair<string, string> blah = undoStack->top();
+                        undoStack->pop();
+                        response = "cell ";
+                        response += blah.first;
+                        response += " ";
+                        response += blah.second;
+                        response += "\n";
+                        cout << response << endl;
+                        //Possible fix:
+                        (*cells)[blah.first] = blah.second;
+                    }
+                    else
+                    {
+                        cout << "but the stack is empty!" << endl;
+                    }
+                }
+                //DID NOT RECEIVE A COMMAND
+                else {
+                    messagestream.str("");
+                    continue;
+                }
+            }
+            //Make sure we actually have a sheet to iterate over
+            if (user_sheet != NULL) {
+                for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
+                    int target_socket = *it;
+                    write(target_socket, response.c_str(), response.size()); //Send Response to clients
+                }
+            }
+            messagestream.str("");
         }
-        memset(client_message, 0, sizeof client_message); //Clear out the message buffer. 
+        memset(client_message, 0, sizeof client_message); //Clear out the message buffer.
     }
 
-    if(read_size == 0)
+    if (read_size == 0)
     {
-       // cout << "Before Disconnect Users:" << user_sheet->connected_sockets.size();   
+        // cout << "Before Disconnect Users:" << user_sheet->connected_sockets.size();
 
-        for(std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it){
+        for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
             int target_socket = *it;
-            if(sock == target_socket){
-                 user_sheet->connected_sockets.erase(it); 
-                 break;
+            if (sock == target_socket) {
+                user_sheet->connected_sockets.erase(it);
+                break;
             }
         }
-        
+
         //cout << "After Disconnect Users: " << user_sheet->connected_sockets.size() << endl;
         cout << "Client disconnected\n";
-        fflush(stdout); //Flush std out   
+        fflush(stdout); //Flush std out
     }
-    else if(read_size == -1)
+    else if (read_size == -1)
     {
         perror("recv failed");
     }
@@ -197,13 +292,13 @@ void *accepted_callback(void *socket_desc)
     free(socket_desc);
     return 0;
 }
-vector<char*> tokenize(string delimiter, string target){
+vector<char*> tokenize(string delimiter, string target) {
     char * input = new char[target.size() + 1];
     std::copy(target.begin(), target.end(), input);
     input[target.size()] = '\0';
     char *token = std::strtok(input, delimiter.c_str());
     vector<char*> tokens;
-    while(token != NULL){
+    while (token != NULL) {
         tokens.push_back(token);
         token = std::strtok(NULL, delimiter.c_str());
     }
