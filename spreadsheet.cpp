@@ -18,7 +18,7 @@ using namespace std;
 //keeping track and performing undo's, and saving the file.
 spreadsheet::spreadsheet(string sheet_name) {
   this->sheet_name = sheet_name;
-  open(sheet_name);
+  this->open_file(sheet_name);
 }
 //empty contructor
 spreadsheet::spreadsheet() {
@@ -38,7 +38,7 @@ void spreadsheet::process_command(string command) {
   pthread_mutex_unlock(&lock);
 }
 //reads file and returns the cell commands
-void spreadsheet::open(string sheet_name){
+void spreadsheet::open_file(string sheet_name){
   string path = "sheets/";
   path += sheet_name;
   path += ".txt";

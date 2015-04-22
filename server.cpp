@@ -174,7 +174,13 @@ void* accepted_callback(void *socket_desc)
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
-                        response = user_sheet->get_all_cells();
+                        
+                        response += "connected ";
+                        stringstream value;
+                        value << user_sheet->cells_map.size();
+                        response +=  value.str();
+                        response += " \n";
+                        response += user_sheet->get_all_cells();
                         //Need to fetch sheet data here
                     }
                 }

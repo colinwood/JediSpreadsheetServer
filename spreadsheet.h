@@ -13,7 +13,7 @@ class spreadsheet{
 		void process_command(std::string command);//Thread safe method that process spreadsheet commands
 		std::string sheet_name;
 		std::vector<int> connected_sockets; //holds pointers to all the active sockets working on this sheet
-		void open(std::string sheet_name);
+		void open_file(std::string sheet_name);
 		std::map<std::string, std::string> cells_map;
 		std::string get_all_cells();
 		void save();
