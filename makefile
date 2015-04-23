@@ -1,3 +1,3 @@
 all: 
 
-	g++ server.cpp session.cpp spreadsheet.cpp -o server -lpthread -g
+	g++ server.cpp session.cpp spreadsheet.cpp -o server -lpthread
