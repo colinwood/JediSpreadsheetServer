@@ -28,6 +28,7 @@ void *accepted_callback(void *); //Forward decleration
 vector<char*> tokenize(string delimiter, string target);
 stack<pair<string, string> > * undoStack;
 map<string, string> * cells;
+pthread_mutex_t lockey;
 
 int main(int argc , char *argv[])
 {
@@ -140,7 +141,7 @@ void* accepted_callback(void *socket_desc)
     const string connect = "connect";
     const string celcom = "cell";
     const string circular = "circular";
-    const string undo = "undo";
+    const string undo = "undo\r";
     const string register_command = "register";
 
     stringstream messagestream;
@@ -175,7 +176,7 @@ void* accepted_callback(void *socket_desc)
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
-                        
+
                         response += "connected ";
                         stringstream value;
                         value << user_sheet->cells_map.size();
@@ -214,7 +215,7 @@ void* accepted_callback(void *socket_desc)
 
                     command.erase(command.begin(), command.end());
                     int i = 2;
-                    while( i != command.size() && i < command.size() && command.size() != 0){
+                    while ( i != command.size() && i < command.size() && command.size() != 0) {
                         content += command.at(i);
                         i++;
                     }
@@ -224,17 +225,33 @@ void* accepted_callback(void *socket_desc)
                     }
                     undoStack->push(pair<string, string>(cellname, oldcontent));
                     (*cells)[cellname] = content;
-                    cout << cellname << " " << oldcontent << " inserted into the stack" << endl;
-                    response = "cell ";
-                    response += cellname;
-                    response += " ";
-                    response += content;
-                    response += "\n";
+                    if (pthread_mutex_init(&lockey, NULL) != 0)
+                    {
+                        printf("\n mutex init failed\n");
+                    }
+                    pthread_mutex_lock(&lockey);
+                    if (user_sheet->process_command(tokens.at(0))) {
+                        cout << cellname << " " << oldcontent << " inserted into the stack" << endl;
+                        response = "cell ";
+                        response += cellname;
+                        response += " ";
+                        response += content;
+                        response += "\n";
+                    }
+                    else {
+                        response = "cell ";
+                        response += cellname;
+                        response += " ";
+                        response += oldcontent;
+                        response += "\n";
+                        user_sheet->process_command(response);
+                    }
+                    pthread_mutex_unlock(&lockey);
                     cout << response << endl;
                     cell_update = true;
                 }
                 //UNDO COMMAND
-                else if (undo.compare(command.at(0)) == 0 && command.size() == 1) {
+                else if (undo.compare(tokens.at(0)) == 0) {
 
                     string cellname;
                     string content;
@@ -284,16 +301,16 @@ void* accepted_callback(void *socket_desc)
 
     if (read_size == 0 )
     {
-        if(user_sheet != NULL){
+        if (user_sheet != NULL) {
 
-        for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
-            int target_socket = *it;
-            if (sock == target_socket) {
-                user_sheet->connected_sockets.erase(it);
-                break;
+            for (std::vector<int>::iterator it = user_sheet->connected_sockets.begin(); it != user_sheet->connected_sockets.end(); ++it) {
+                int target_socket = *it;
+                if (sock == target_socket) {
+                    user_sheet->connected_sockets.erase(it);
+                    break;
+                }
             }
         }
-    }
         cout << "Client disconnected\n";
         fflush(stdout); //Flush std out
     }

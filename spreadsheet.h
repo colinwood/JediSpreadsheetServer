@@ -10,7 +10,7 @@ class spreadsheet{
 		spreadsheet();
 		~spreadsheet();
 		static void create(std::string sheet_name);//Needs to create an empty sheetwith necessary xml data
-		void process_command(std::string command);//Thread safe method that process spreadsheet commands
+		bool process_command(std::string command);//Thread safe method that process spreadsheet commands
 		std::string sheet_name;
 		std::vector<int> connected_sockets; //holds pointers to all the active sockets working on this sheet
 		void open_file(std::string sheet_name);
@@ -20,8 +20,8 @@ class spreadsheet{
 	private:
 		pthread_mutex_t lock;
 		std::vector<char *> tokenize(std::string delimiter, std::string target);
-		
-
+		bool circular_dependency(std::string cell_name, std::string cell_contents);
+		int command_counter;
 		
 };
 #endif
