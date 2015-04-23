@@ -109,7 +109,7 @@ bool validate_user(string client_name)
     string line;
     while (getline(readFile, line)) {
 
-        if (line == client_name) {
+        if (line.find(client_name) != string::npos) {
             readFile.close();
             return true;
         }
