@@ -66,7 +66,7 @@ spreadsheet* session::connect(string sheet_name, int user_socket)  {
 //returns true when the sheet is located in the sheet folder
 bool session::sheet_exists(string sheet_name) {
 	string path = "sheets/";
-	path += sheet_name;
+	path += sheet_name.c_str();
 	path += ".txt";
 	cout << path << endl;
 	ifstream file(path.c_str());; //Check if it is there by trying to open it

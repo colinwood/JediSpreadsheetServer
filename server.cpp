@@ -171,7 +171,7 @@ void* accepted_callback(void *socket_desc)
                     }
                     else {
 
-                        sheet_name.erase(sheet_name.size());
+                        sheet_name.erase(sheet_name.size() - 1);
                         user_sheet = sesh.connect(sheet_name, sock); //connect the user to the spreadsheet and pass along the socket
                         cout << "Client: " << client_name << " Connecting to : " << user_sheet << endl;
                         cout << sheet_name << " Users: " << user_sheet->connected_sockets.size() << endl;//output how many active users
@@ -214,7 +214,7 @@ void* accepted_callback(void *socket_desc)
 
                     command.erase(command.begin(), command.end());
                     int i = 2;
-                    while( i != command.size()){
+                    while( i != command.size() && i < command.size() && command.size() != 0){
                         content += command.at(i);
                         i++;
                     }
@@ -263,7 +263,7 @@ void* accepted_callback(void *socket_desc)
                     }
                 }
                 //DID NOT RECEIVE A COMMAND
-                else if(command.size() > 0){
+                else {
                     response = "error 2 invalid_command\n";
                 }
             }
